@@ -53,53 +53,95 @@ async function listHtmlFilesRecursive(dir) {
 }
 
 /**
- * Bake all pages under content/pages/ into dist/<route>/index.html.
+ * Normalize a singular-or-array option into a non-empty array. If both the
+ * plural and singular forms are provided, the plural wins.
+ *
+ * @param {string|string[]|undefined} plural
+ * @param {string|undefined} singular
+ * @param {string} fallback - default value when neither is provided
+ * @returns {string[]}
+ */
+function toArrayOption(plural, singular, fallback) {
+    if (Array.isArray(plural)) return plural.slice();
+    if (typeof plural === 'string') return [plural];
+    if (typeof singular === 'string') return [singular];
+    return [fallback];
+}
+
+/**
+ * Bake all pages under one or more content/pages/ roots into dist/<route>/index.html.
+ *
+ * Multi-root support is how frontend modules contribute pages to the host app:
+ * the app's own `content/pages/` is the first root, and each enabled module's
+ * `pages/` directory is appended. Files from all roots are merged and routed
+ * by their relative path within their own root — so `modules/blog/pages/posts/index.html`
+ * routes to `/posts/` exactly the same as `content/pages/posts/index.html` would.
+ *
+ * Route conflicts across roots are a HARD ERROR (mirrors backend Router conflict
+ * detection in handlr-framework v0.5+). The error message names both source files
+ * so you can locate the collision immediately.
  *
  * @param {object} [opts]
- * @param {string} [opts.root]            - Project root. Defaults to process.cwd().
- * @param {object} [opts.siteConfig]      - Site-wide values injected into layouts via [[propName]].
- * @param {string} [opts.distDir]         - Override dist output dir. Defaults to <root>/dist.
- * @param {string} [opts.pagesDir]        - Override pages dir. Defaults to <root>/content/pages.
- * @param {string} [opts.layoutsDir]      - Override layouts dir. Defaults to <root>/content/layouts.
- * @param {string|string[]} [opts.componentsDir] - Override components dir(s). Defaults to <root>/content/components.
+ * @param {string} [opts.root]                       - Project root. Defaults to process.cwd().
+ * @param {object} [opts.siteConfig]                 - Site-wide values injected into layouts via [[propName]].
+ * @param {string} [opts.distDir]                    - Override dist output dir. Defaults to <root>/dist.
+ * @param {string|string[]} [opts.pagesDirs]         - One or more directories to scan for page files. Order matters for diagnostics.
+ * @param {string} [opts.pagesDir]                   - Back-compat singular form. Use `pagesDirs` for new code.
+ * @param {string} [opts.layoutsDir]                 - Layouts dir. Defaults to <root>/content/layouts. Single root by design — layouts are app-level.
+ * @param {string|string[]} [opts.componentsDirs]    - One or more component dirs (later entries override earlier ones for same-name lookups).
+ * @param {string|string[]} [opts.componentsDir]     - Back-compat alias for `componentsDirs`.
  */
 export async function buildPages(opts = {}) {
     const root = opts.root || process.cwd();
     const distDir = opts.distDir || path.join(root, 'dist');
-    const pagesDir = opts.pagesDir || path.join(root, 'content', 'pages');
     const layoutsDir = opts.layoutsDir || path.join(root, 'content', 'layouts');
-    const componentsDir = opts.componentsDir || path.join(root, 'content', 'components');
     const siteConfig = opts.siteConfig || {};
+
+    const pagesDirs = toArrayOption(opts.pagesDirs, opts.pagesDir, path.join(root, 'content', 'pages'));
+    const componentsDirs = toArrayOption(opts.componentsDirs, opts.componentsDir, path.join(root, 'content', 'components'));
 
     const manifest = await readManifest(distDir);
     const { jsSrc, cssHref } = resolveAssetsFromManifest(manifest);
 
-    const pageFiles = await listHtmlFilesRecursive(pagesDir);
+    // Walk every pages root, tagging each discovered file with its source root
+    // so route resolution and conflict diagnostics know where it came from.
+    /** @type {Array<{filePath: string, sourceDir: string}>} */
+    const allEntries = [];
+    for (const dir of pagesDirs) {
+        const files = await listHtmlFilesRecursive(dir);
+        for (const filePath of files) {
+            allEntries.push({ filePath, sourceDir: dir });
+        }
+    }
 
-    // Prefer directory index pages (foo/index.html) over same-route flat pages (foo.html).
-    pageFiles.sort((a, b) => {
-        const aBase = path.basename(a).toLowerCase();
-        const bBase = path.basename(b).toLowerCase();
+    // Within each source dir, prefer directory index pages (foo/index.html) over
+    // same-route flat pages (foo.html). Stable across roots: earlier roots win
+    // ties when filenames are equivalent.
+    allEntries.sort((a, b) => {
+        const aBase = path.basename(a.filePath).toLowerCase();
+        const bBase = path.basename(b.filePath).toLowerCase();
         if (aBase === 'index.html' && bBase !== 'index.html') return -1;
         if (bBase === 'index.html' && aBase !== 'index.html') return 1;
-        return a.localeCompare(b);
+        return a.filePath.localeCompare(b.filePath);
     });
 
     /** @type {Array<{route:string, outDir:string, pagePath:string, title:string}>} */
     const pages = [];
+    /** @type {Map<string, string>} route -> first filePath that claimed it */
     const seen = new Map();
 
-    for (const filePath of pageFiles) {
-        const rel = path.relative(pagesDir, filePath);
+    for (const { filePath, sourceDir } of allEntries) {
+        const rel = path.relative(sourceDir, filePath);
         const { route, outDir } = routeAndOutDirFromPageRel(rel, distDir);
+
         if (seen.has(route)) {
-            console.warn(
-                `Duplicate route ${route} from ${path.relative(root, filePath)}; keeping ${path.relative(
-                    root,
-                    seen.get(route)
-                )}`
+            const firstFile = seen.get(route);
+            throw new Error(
+                `Route ${route} is declared twice:\n` +
+                `  - ${path.relative(root, firstFile)}\n` +
+                `  - ${path.relative(root, filePath)}\n` +
+                `Each route must be owned by exactly one page file across all pagesDirs.`
             );
-            continue;
         }
 
         seen.set(route, filePath);
@@ -116,7 +158,7 @@ export async function buildPages(opts = {}) {
             layoutsDir,
             pagePath: p.pagePath,
             title: p.title,
-            componentsDir,
+            componentsDir: componentsDirs,
             siteConfig,
             jsSrc,
             cssHref,
