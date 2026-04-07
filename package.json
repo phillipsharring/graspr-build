@@ -1,0 +1,34 @@
+{
+    "name": "@phillipsharring/graspr-build",
+    "version": "0.1.0",
+    "description": "Build mechanics for Graspr sites: HTML compiler, page baker, Vite dev plugin",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.mjs",
+        "./vite": "./src/vite-plugin.mjs",
+        "./html-compiler": "./src/html-compiler.mjs",
+        "./build-pages": "./src/build-pages.mjs"
+    },
+    "bin": {
+        "graspr-build-pages": "./bin/build-pages.mjs"
+    },
+    "files": [
+        "src",
+        "bin",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE"
+    ],
+    "keywords": [
+        "graspr",
+        "html",
+        "static-site",
+        "vite-plugin",
+        "build"
+    ],
+    "author": "Phillip Harrington <phillip@phillipharrington.com> (https://phillipharrington.com/)",
+    "license": "MIT",
+    "engines": {
+        "node": ">=18"
+    }
+}
