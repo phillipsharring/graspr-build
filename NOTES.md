@@ -69,6 +69,25 @@ Informal scratchpad for ideas, deferred features, and design notes that don't be
 
 ---
 
+### Clean up `dist/.vite/manifest.json` after reading it
+
+**What**: After `buildPages()` reads `dist/.vite/manifest.json` (Vite's hashed-asset lookup table), it should either delete the file or move it outside `dist/`. Right now graspr-build leaves it sitting in `dist/.vite/manifest.json` and downstream consumers who naïvely `aws s3 sync dist/ s3://...` end up shipping the build manifest to their public bucket.
+
+**Why**: phillipharrington.com's first production deploy of graspr-build (2026-04-08) shipped `dist/.vite/manifest.json` to the public S3 bucket. Not sensitive — the manifest only maps `src/app.js → assets/app-XXXX.js + assets/app-XXXX.css`, which is also discoverable from any rendered page's `<link>` and `<script>` tags — but it's build-internal state in a `.vite/` directory and has no business being publicly served. Workaround in the buildspec: `aws s3 sync dist/ s3://... --exclude '.vite/*'`. Annoying that every consumer has to know about this.
+
+**How to apply**:
+
+- After `readManifest()` finishes in `build-pages.mjs`, delete the manifest file (and the now-empty `.vite/` directory if it has no other contents). The manifest is only needed during the `buildPages()` run; once asset hashes are baked into the rendered HTML, nothing downstream cares about it.
+- Optionally: add an opt-out (`opts.keepViteManifest: true`) for consumers who want the manifest preserved for some external tool. Probably not worth it — anyone who needs it can read it before calling `buildPages()`.
+- Even better: move the manifest read from `dist/.vite/manifest.json` into the Vite plugin's build hook so graspr-build never touches the manifest file directly. Vite exposes the manifest as part of `bundle` in the `writeBundle` plugin hook. That requires teaching `grasprBuild()` (vite-plugin.mjs) to coordinate with the post-vite `graspr-build-pages` step, which is more architectural surgery than just rm-ing a file. Defer this unless there's another reason to revisit the vite/cli boundary.
+- If the simple delete path is taken: handle the case where `dist/.vite/` doesn't exist (e.g. consumer is calling `buildPages()` directly without running `vite build` first — they'd be passing assets via opts instead). Don't throw — just skip the cleanup.
+- Add a test that asserts `dist/.vite/manifest.json` does NOT exist after `buildPages()` completes when called via the normal vite-build-then-buildPages flow.
+- CHANGELOG entry — small enough to ship in a patch release (0.2.x) rather than waiting for the 0.3.0 dist-shape bundle. This is a bug fix, not a feature.
+
+**Until this lands**: phillipharrington.com's `buildspec.yml` excludes `.vite/*` from the S3 sync. Other graspr-build consumers should do the same — worth mentioning in the README under a "Hosting" or "Deployment" section as a heads-up.
+
+---
+
 ## Format note
 
 Each entry should have: **What** (one-line summary), **Why** (motivation, ideally with concrete numbers or a referenced incident), **How to apply** (enough detail that picking it up later doesn't require re-deriving the design). Move entries out of this file when they ship — they should land in `CHANGELOG.md` instead.
