@@ -380,7 +380,11 @@ async function expandComponents(html, { componentsDirs, componentNames, maxPasse
                 attrs,
                 tagName: tagName.toLowerCase(),
             });
-            const tplSrc = await fs.readFile(componentPath, 'utf-8');
+            // Trim surrounding whitespace from the template so the trailing
+            // newline that every editor adds doesn't bleed into the page after
+            // an inline component (e.g. `<lnk>here</lnk>,` should render as
+            // `here,`, not `here ,`).
+            const tplSrc = (await fs.readFile(componentPath, 'utf-8')).trim();
 
             let slotHtml = '';
             let closeEnd = tagEnd + 1;

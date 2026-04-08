@@ -189,6 +189,41 @@ test('buildPages indexes earlier pagesDirs first', async () => {
     }
 });
 
+// ── Inline component templates don't bleed surrounding whitespace ──
+
+test('inline component substitution does not introduce phantom whitespace', async () => {
+    const fx = await makeFixture({
+        'content/pages': {
+            'index.html': '<p>The code is <lnk to="https://example.com">here</lnk>, if you are curious.</p>',
+        },
+    });
+    try {
+        // Component file ends with a trailing newline (POSIX, and every editor
+        // adds one). Without trimming this would render as `here ,` instead of
+        // `here,` because the newline collapses into a space at the inline
+        // boundary.
+        await fs.writeFile(
+            path.join(fx.componentsDir, 'lnk.html'),
+            '<a href="[[to]]">[[slot]]</a>\n',
+            'utf-8'
+        );
+
+        await buildPages({
+            root: fx.root,
+            distDir: fx.distDir,
+            pagesDir: fx.pagesDirs[0],
+            layoutsDir: fx.layoutsDir,
+            componentsDir: fx.componentsDir,
+        });
+
+        const home = await fs.readFile(path.join(fx.distDir, 'index.html'), 'utf-8');
+        assert.match(home, /<a href="https:\/\/example\.com">here<\/a>,/);
+        assert.doesNotMatch(home, /<\/a>\s+,/);
+    } finally {
+        await cleanup(fx.root);
+    }
+});
+
 // ── pagesDirs wins over pagesDir if both provided ──
 
 test('buildPages prefers pagesDirs over pagesDir when both are given', async () => {

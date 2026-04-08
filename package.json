@@ -1,6 +1,6 @@
 {
     "name": "@phillipsharring/graspr-build",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Build mechanics for Graspr sites: HTML compiler, page baker, Vite dev plugin",
     "type": "module",
     "exports": {

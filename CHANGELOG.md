@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+
+- Component templates are now trimmed of surrounding whitespace before substitution. The trailing newline that every editor (and POSIX) adds to text files was bleeding into the page after inline components, so `<lnk>here</lnk>,` rendered as `here ,` instead of `here,`. Block-level components were unaffected because the surrounding block context was already collapsing the whitespace.
+
 ## 0.2.0
 
 Multi-root page discovery for frontend modules.
