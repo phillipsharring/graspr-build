@@ -20,7 +20,9 @@
         "bin",
         "README.md",
         "CHANGELOG.md",
-        "LICENSE"
+        "LICENSE",
+        "handlr.png",
+        "h.png"
     ],
     "keywords": [
         "graspr",

@@ -1,5 +1,7 @@
 # @phillipsharring/graspr-build
 
+![Handlr](handlr.png)
+
 Build mechanics for [Graspr](https://github.com/phillipsharring/graspr-framework) sites: HTML compiler, static page baker, and Vite dev plugin.
 
 This package contains everything needed to **build** a Graspr site, separate from the runtime concerns (HTMX, Handlebars, auth) that live in `@phillipsharring/graspr-framework`. Static sites can depend on `graspr-build` alone; full apps depend on both.
