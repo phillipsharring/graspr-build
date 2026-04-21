@@ -13,7 +13,7 @@ Multi-root page discovery for frontend modules.
 ### Added
 
 - `buildPages({ pagesDirs })` and `grasprBuild({ pagesDirs })` accept an array of page directories. Files from all roots are merged and routed by their relative path within their own root, so a module's `modules/blog/pages/posts/index.html` produces `/posts/` exactly the way `content/pages/posts/index.html` would.
-- `componentsDirs` option exposed alongside the existing back-compat `componentsDir`. Internally `renderPage()` already supported arrays — this just plumbs the option through `buildPages()` and the dev plugin.
+- `componentsDirs` option exposed alongside the existing back-compat `componentsDir`. Internally `renderPage()` already supported arrays  - this just plumbs the option through `buildPages()` and the dev plugin.
 - Test suite (`npm test`, runs on `node:test`) covering multi-root walking, conflict detection, ordering, and back-compat.
 
 ### Changed
@@ -30,10 +30,10 @@ Initial release. Extracted from `graspr-app-skeleton`'s `scripts/` directory and
 
 ### Exports
 
-- `renderPage(...)` — single-page HTML compiler with custom-tag expansion, layout resolution, `<page-head>` extraction, and `[[prop]]`/`[[#if]]`/`[[slot]]` interpolation
-- `buildPages({ root, siteConfig, ... })` — bake every page under `content/pages/` to `dist/<route>/index.html`
-- `grasprBuild({ siteConfig })` from `@phillipsharring/graspr-build/vite` — Vite dev middleware that renders pages on the fly during `vite dev`
-- `graspr-build-pages` bin — CLI shim around `buildPages()` for use in `package.json` scripts
+- `renderPage(...)`  - single-page HTML compiler with custom-tag expansion, layout resolution, `<page-head>` extraction, and `[[prop]]`/`[[#if]]`/`[[slot]]` interpolation
+- `buildPages({ root, siteConfig, ... })`  - bake every page under `content/pages/` to `dist/<route>/index.html`
+- `grasprBuild({ siteConfig })` from `@phillipsharring/graspr-build/vite`  - Vite dev middleware that renders pages on the fly during `vite dev`
+- `graspr-build-pages` bin  - CLI shim around `buildPages()` for use in `package.json` scripts
 
 ### API notes
 

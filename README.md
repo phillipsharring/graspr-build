@@ -17,12 +17,12 @@ npm install -D @phillipsharring/graspr-build vite @tailwindcss/vite tailwindcss
 ```
 my-site/
 ├── content/
-│   ├── layouts/        # base.html, etc — shared shells
+│   ├── layouts/        # base.html, etc  - shared shells
 │   ├── components/     # custom-tag templates: lnk.html, callout.html, ...
 │   └── pages/          # one HTML file per route
 ├── public/             # static assets, copied as-is
 ├── src/
-│   ├── app.js          # vite entry — at minimum, imports CSS
+│   ├── app.js          # vite entry  - at minimum, imports CSS
 │   └── styles/         # CSS (tailwind v4 @theme block, etc)
 ├── site.config.js      # siteName, siteUrl, copyright, ...
 └── vite.config.js
@@ -88,12 +88,12 @@ export default defineConfig({
 </aside>
 ```
 
-- `[[prop]]` — HTML-escaped prop
-- `[[{prop}]]` — raw prop (for attribute values, HTML snippets)
-- `[[slot]]` — child content
-- `[[#if flag]] ... [[else]] ... [[/if]]` — boolean conditional on a prop's truthiness
+- `[[prop]]`  - HTML-escaped prop
+- `[[{prop}]]`  - raw prop (for attribute values, HTML snippets)
+- `[[slot]]`  - child content
+- `[[#if flag]] ... [[else]] ... [[/if]]`  - boolean conditional on a prop's truthiness
 
-Custom tags can be either HTML custom-element style (`<my-callout>` — must contain a hyphen) or single-word tags (`<callout>` — works as long as a matching `callout.html` exists in `content/components/`).
+Custom tags can be either HTML custom-element style (`<my-callout>`  - must contain a hyphen) or single-word tags (`<callout>`  - works as long as a matching `callout.html` exists in `content/components/`).
 
 ## Programmatic API
 
