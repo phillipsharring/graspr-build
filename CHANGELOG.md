@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.3.0
+
+Module system.
+
+### Added
+
+- `configure(mod, overrides)` -- shallow-merges site-specific config onto a module's defaults. Modules registered without `configure()` use their own defaults.
+- `resolveModuleDirs(rootDir, modules)` -- resolves an array of module entries into `pagesDirs` and `componentsDirs` for graspr-build. Accepts both module objects (from npm packages, self-resolving via `import.meta.url`) and legacy strings (local directory names under `modules/`).
+- New export path: `@phillipsharring/graspr-build/modules` for the module utilities.
+
+### How it works
+
+Modules are plain objects with `name`, `pagesDir`, `componentsDir`, `defaults`, `config`, and `init()`. They self-resolve their own filesystem paths, so the build system just reads what the module declares rather than guessing paths by convention. This enables modules distributed as npm packages.
+
+```js
+// site.config.js
+import { landing } from '@phillipsharring/handlr-module-landing';
+import { configure } from '@phillipsharring/graspr-build/modules';
+
+export default {
+    modules: [
+        landing,                                // uses defaults
+        configure(landing, { adminNav: false }), // overridden
+    ],
+};
+```
+
 ## 0.2.1
 
 ### Fixed
