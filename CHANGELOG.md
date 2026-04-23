@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+### Added
+
+- `moduleRoot(importMetaUrl)` -- resolves a module's root directory from `import.meta.url` using the URL standard. Works in both Node and browser contexts without Node-only imports. Modules use this instead of `node:url` + `node:path` boilerplate.
+
 ## 0.3.2
 
 ### Added

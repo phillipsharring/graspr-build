@@ -2,6 +2,23 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 /**
+ * Resolve the root directory of a module from its `import.meta.url`.
+ * Works in both Node and browser contexts -- uses the URL standard, no Node-only APIs.
+ *
+ * @param {string} importMetaUrl - The module's `import.meta.url` (must be in a `src/` subdirectory).
+ * @returns {string} Absolute path to the module root (one level up from the file).
+ *
+ * @example
+ * // In a module's src/index.js:
+ * import { moduleRoot } from '@phillipsharring/graspr-build/modules';
+ * const root = moduleRoot(import.meta.url);
+ * // root = '/path/to/my-module'
+ */
+export function moduleRoot(importMetaUrl) {
+    return new URL('..', importMetaUrl).pathname;
+}
+
+/**
  * Configure a graspr module with site-specific overrides.
  *
  * Modules export an object with `defaults` containing their default config.
