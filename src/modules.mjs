@@ -69,21 +69,11 @@ export function resolveModuleDirs(rootDir, modules = []) {
             throw new Error('Module entry must be a string or an object with a `name` property.');
         }
 
-        if (mod.pagesDir) {
-            if (!existsSync(mod.pagesDir)) {
-                throw new Error(
-                    `Module '${mod.name}' declares pagesDir at ${mod.pagesDir} but it does not exist.`
-                );
-            }
+        if (mod.pagesDir && existsSync(mod.pagesDir)) {
             pagesDirs.push(mod.pagesDir);
         }
 
-        if (mod.componentsDir) {
-            if (!existsSync(mod.componentsDir)) {
-                throw new Error(
-                    `Module '${mod.name}' declares componentsDir at ${mod.componentsDir} but it does not exist.`
-                );
-            }
+        if (mod.componentsDir && existsSync(mod.componentsDir)) {
             componentsDirs.push(mod.componentsDir);
         }
     }

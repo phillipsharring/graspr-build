@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Fixed
+
+- `resolveModuleDirs()` no longer throws when a module's `pagesDir` or `componentsDir` doesn't exist on disk. This happens when npm skips empty directories during publish. The dir is silently skipped instead.
+
 ## 0.3.0
 
 Module system.
