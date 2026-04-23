@@ -80,3 +80,17 @@ export function resolveModuleDirs(rootDir, modules = []) {
 
     return { pagesDirs, componentsDirs };
 }
+
+/**
+ * Initialize all modules that provide an `init()` method.
+ * Call this once from the app's entry JS after core setup is complete.
+ *
+ * @param {Array<object|string>} [modules] - The modules array from site.config.js.
+ */
+export function initModules(modules = []) {
+    for (const mod of modules) {
+        if (typeof mod === 'object' && typeof mod.init === 'function') {
+            mod.init();
+        }
+    }
+}

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+### Added
+
+- `initModules(modules)` -- iterates the modules array from `site.config.js` and calls `init()` on each module object that provides one. Apps call this once from their entry JS.
+
 ## 0.3.1
 
 ### Fixed
