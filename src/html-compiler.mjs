@@ -577,6 +577,21 @@ export async function renderPage({ layoutsDir, pagePath, title, jsSrc, cssHref, 
         result = result.replaceAll(`[[${key}]]`, htmlEscape(String(value ?? '')));
     }
 
+    // [[moduleAdminNav]] — inject admin nav links from modules that declare adminNav
+    if (result.includes('[[moduleAdminNav]]')) {
+        const modules = Array.isArray(siteConfig.modules) ? siteConfig.modules : [];
+        const navLinks = modules
+            .filter(mod => typeof mod === 'object' && mod.defaults?.adminNav)
+            .map(mod => {
+                const nav = mod.config?.adminNav ?? mod.defaults.adminNav;
+                if (nav === false) return ''; // configure(mod, { adminNav: false }) disables it
+                return `<a data-nav-section="${htmlEscape(nav.path)}" href="${htmlEscape(nav.path)}" data-requires-permission="${htmlEscape(nav.permission || 'admin.access')}" hidden class="hover:text-slate-300">${htmlEscape(nav.label)}</a>`;
+            })
+            .filter(Boolean)
+            .join('\n                    ');
+        result = result.replaceAll('[[moduleAdminNav]]', navLinks);
+    }
+
     result = result.replaceAll('[[gitSha]]', getGitSha());
 
     return result;

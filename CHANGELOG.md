@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+
+### Added
+
+- `[[moduleAdminNav]]` layout placeholder -- generates admin nav links from modules that declare `adminNav` in their defaults. Respects `configure(mod, { adminNav: false })` to disable. Outputs `<a data-nav-section>` elements matching the existing admin nav pattern.
+
 ## 0.3.3
 
 ### Added
