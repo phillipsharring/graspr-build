@@ -198,7 +198,10 @@ export function grasprBuild(opts = {}) {
             server.middlewares.use(async (req, res, next) => {
                 try {
                     if (req.method !== 'GET') return next();
-                    const url = (req.url || '/').split('?')[0];
+                    const rawUrl = req.url || '/';
+                    const qIdx = rawUrl.indexOf('?');
+                    const url = qIdx === -1 ? rawUrl : rawUrl.slice(0, qIdx);
+                    const queryString = qIdx === -1 ? '' : rawUrl.slice(qIdx);
                     const ext = path.extname(url).toLowerCase();
                     if (ext && ext !== '.html') return next();
 
@@ -208,6 +211,19 @@ export function grasprBuild(opts = {}) {
 
                     const pagePath = await resolvePagePath(normalizeUrlPath(url));
                     if (!pagePath) return next();
+
+                    // Canonicalize directory-style URLs with a trailing slash.
+                    // If the resolved page is an index.html (i.e., URL refers
+                    // to a directory) but the request URL has no trailing
+                    // slash, 301 to the canonical form. Keeps relative asset
+                    // resolution and per-prefix permission checks consistent
+                    // with prod (CloudFront rewrites assume the trailing slash).
+                    if (!url.endsWith('/') && path.basename(pagePath).toLowerCase() === 'index.html') {
+                        res.statusCode = 301;
+                        res.setHeader('Location', url + '/' + queryString);
+                        res.end();
+                        return;
+                    }
 
                     const html = await renderPage({
                         layoutsDir,

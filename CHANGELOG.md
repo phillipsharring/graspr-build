@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5
+
+### Fixed
+
+- Vite dev plugin: 301-redirect directory-style URLs missing their trailing slash (e.g. `/admin` → `/admin/`) when the resolved page is an `index.html`. Without this, the URL bar would show the slash-less form, which breaks downstream consumers that match on path prefixes (e.g. `path.startsWith('/admin/')`) and also diverges from prod CloudFront behavior. Query strings are preserved.
+
 ## 0.3.4
 
 ### Added
