@@ -227,15 +227,21 @@ function renderComponentTemplate(tplSrc, props, slotHtml) {
 
 function findMatchingCloseForTag(src, tagName, fromIdx) {
     const open = `<${tagName}`;
-    const close = `</${tagName}>`;
+    // HTML5 allows whitespace between the tag name and `>` in end tags
+    // (`</lnk>` and `</lnk\n>` are both valid). Prettier emits the latter
+    // form when wrapping long attribute lists on inline elements, so we
+    // need to tolerate it or those pages fail to build.
+    const closeRe = new RegExp(`<\\/${escapeRegex(tagName)}\\s*>`, 'g');
     let depth = 1;
     let i = fromIdx;
 
     while (i < src.length) {
         const nextOpen = src.indexOf(open, i);
-        const nextClose = src.indexOf(close, i);
+        closeRe.lastIndex = i;
+        const closeMatch = closeRe.exec(src);
+        const nextClose = closeMatch ? closeMatch.index : -1;
 
-        if (nextClose === -1) return -1;
+        if (nextClose === -1) return null;
         if (nextOpen !== -1 && nextOpen < nextClose) {
             depth++;
             i = nextOpen + open.length;
@@ -243,11 +249,17 @@ function findMatchingCloseForTag(src, tagName, fromIdx) {
         }
 
         depth--;
-        if (depth === 0) return nextClose;
-        i = nextClose + close.length;
+        if (depth === 0) {
+            return { start: nextClose, end: nextClose + closeMatch[0].length };
+        }
+        i = nextClose + closeMatch[0].length;
     }
 
-    return -1;
+    return null;
+}
+
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function isCustomComponentTagName(tagName) {
@@ -390,12 +402,12 @@ async function expandComponents(html, { componentsDirs, componentNames, maxPasse
             let closeEnd = tagEnd + 1;
 
             if (!selfClosing) {
-                const closeIdx = findMatchingCloseForTag(src, tagName, tagEnd + 1);
-                if (closeIdx === -1) {
+                const closeMatch = findMatchingCloseForTag(src, tagName, tagEnd + 1);
+                if (!closeMatch) {
                     throw new Error(`Unclosed <${tagName}> tag near: ${openTag}`);
                 }
-                slotHtml = src.slice(tagEnd + 1, closeIdx);
-                closeEnd = closeIdx + `</${tagName}>`.length;
+                slotHtml = src.slice(tagEnd + 1, closeMatch.start);
+                closeEnd = closeMatch.end;
             }
 
             const props = { ...attrs };
@@ -442,11 +454,11 @@ async function expandTemplateSrc(html, pageDir) {
             continue;
         }
 
-        const closeIdx = findMatchingCloseForTag(src, 'template', tagEnd + 1);
-        if (closeIdx === -1) {
+        const closeMatch = findMatchingCloseForTag(src, 'template', tagEnd + 1);
+        if (!closeMatch) {
             throw new Error(`Unclosed <template src="${attrs.src}"> near: ${openTag}`);
         }
-        const closeEnd = closeIdx + '</template>'.length;
+        const closeEnd = closeMatch.end;
 
         const filePath = path.resolve(pageDir, `${attrs.src}.html`);
         const tplSrc = await fs.readFile(filePath, 'utf-8');

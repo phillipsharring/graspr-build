@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6
+
+### Fixed
+
+- HTML compiler: tolerate whitespace before `>` in component end tags. The HTML5 spec allows `</tag\s*>`, and Prettier emits the `</tag\n>` form when wrapping long attribute lists on inline elements. Previously the literal `indexOf('</tag>')` lookup missed those and threw `Unclosed <tag> tag`. `findMatchingCloseForTag` now returns `{ start, end }` instead of a bare index so callers don't have to assume the close tag length.
+
 ## 0.3.5
 
 ### Fixed

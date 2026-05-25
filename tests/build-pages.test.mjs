@@ -224,6 +224,51 @@ test('inline component substitution does not introduce phantom whitespace', asyn
     }
 });
 
+// ── HTML5 end-tag whitespace tolerance ──
+
+test('component close tags may contain whitespace before `>` (prettier-style)', async () => {
+    // Prettier wraps long attribute lists on inline elements like:
+    //   <lnk
+    //       to="https://very-long-url..."
+    //       blank
+    //       >text</lnk
+    //   >
+    // The split `</lnk\n>` is valid HTML5 but used to throw "Unclosed <lnk>".
+    const fx = await makeFixture({
+        'content/pages': {
+            'index.html':
+                '<p>See <lnk\n' +
+                '    to="https://example.com/very/long/path?foo=bar&baz=qux"\n' +
+                '    blank\n' +
+                '    >the link</lnk\n' +
+                '>.</p>',
+        },
+    });
+    try {
+        await fs.writeFile(
+            path.join(fx.componentsDir, 'lnk.html'),
+            '<a href="[[to]]">[[slot]]</a>\n',
+            'utf-8'
+        );
+
+        await buildPages({
+            root: fx.root,
+            distDir: fx.distDir,
+            pagesDir: fx.pagesDirs[0],
+            layoutsDir: fx.layoutsDir,
+            componentsDir: fx.componentsDir,
+        });
+
+        const home = await fs.readFile(path.join(fx.distDir, 'index.html'), 'utf-8');
+        // The component slot rendered (would throw "Unclosed <lnk>" without
+        // the whitespace tolerance fix), and the inline `.` after the link
+        // sits flush with `</a>` — no phantom space.
+        assert.match(home, /<a href="https:\/\/example\.com\/very\/long\/path\?[^"]+">the link<\/a>\./);
+    } finally {
+        await cleanup(fx.root);
+    }
+});
+
 // ── pagesDirs wins over pagesDir if both provided ──
 
 test('buildPages prefers pagesDirs over pagesDir when both are given', async () => {
