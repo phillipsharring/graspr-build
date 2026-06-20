@@ -1,6 +1,6 @@
 {
     "name": "@phillipsharring/graspr-build",
-    "version": "0.3.6",
+    "version": "0.4.0",
     "description": "Build mechanics for Graspr sites: HTML compiler, page baker, Vite dev plugin",
     "type": "module",
     "exports": {
@@ -36,5 +36,16 @@
     "license": "MIT",
     "engines": {
         "node": ">=18"
+    },
+    "peerDependencies": {
+        "html-minifier-terser": "^7.0.0"
+    },
+    "peerDependenciesMeta": {
+        "html-minifier-terser": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "html-minifier-terser": "^7.2.0"
     }
 }

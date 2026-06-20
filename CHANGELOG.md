@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.0
+
+Dist shape options.
+
+### Added
+
+- `buildPages({ flatRoutes: true })` -- emit extensionless sibling files (`dist/about`) instead of directory-style `dist/about/index.html`, for hosts that serve abstract URLs (`/about`, not `/about/`). Replaces the per-site `scripts/flatten-dist.mjs` post-processor that consumers were copying around.
+  - **Configured once in `site.config.js`** via a `flatRoutes` field. The `graspr-build-pages` CLI forwards it to the build, and `grasprBuild({ siteConfig })` falls back to the same field, so dev and prod read one source of truth. The explicit `flatRoutes` option on `buildPages()`/`grasprBuild()` still overrides.
+  - Root stays `dist/index.html`; the `404` page is kept as `dist/404.html` by default.
+  - Override the keep-list with route keys: `flatRoutes: { keepExtension: ['404', 'errors/offline'] }`. The list replaces the default.
+  - Nested-route conflicts (a `/blog/` page flattening to `dist/blog` while a `/blog/post/` page needs `dist/blog/` to be a directory) are a hard error naming both source files — same conflict semantics as the cross-root duplicate-route check.
+  - The `grasprBuild()` Vite plugin accepts the same option. Dev serving is unchanged (it already resolves `/about` without redirects); the option only runs the matching nested-route conflict check so `vite dev` fails like `npm run build`.
+  - Default `flatRoutes: false` — no behavior change.
+- `buildPages({ minify: true })` -- minify each baked page via the optional `html-minifier-terser` peer dependency.
+  - Also configured via a `minify` field in `site.config.js`, forwarded by the `graspr-build-pages` CLI (same centralized pattern as `flatRoutes`).
+  - `true` uses sensible defaults (`removeAttributeQuotes`, `collapseWhitespace`, `removeComments`, `removeRedundantAttributes`, `removeScriptTypeAttributes`, `removeTagWhitespace`); pass an object to override individual options (merged onto the defaults).
+  - `html-minifier-terser` is declared as an optional peer dependency — loaded lazily only when minify is on. If it's requested but missing, the build throws a clear install hint before rendering any page.
+  - Build-only: `vite dev` always serves unminified HTML. Default `minify: false` — no behavior change.
+- README gains a **Hosting** section covering `Content-Type` tagging for extensionless objects on S3.
+
+### Fixed
+
+- `buildPages()` now deletes `dist/.vite/manifest.json` (and the `.vite/` dir if empty) after baking asset hashes into the pages. Previously the build-internal manifest was left in `dist/` and a naive `aws s3 sync dist/` shipped it to the public bucket. No-ops when the manifest isn't present (e.g. `buildPages()` called without a preceding `vite build`). Consumers no longer need `--exclude '.vite/*'` on their sync.
+
 ## 0.3.6
 
 ### Fixed

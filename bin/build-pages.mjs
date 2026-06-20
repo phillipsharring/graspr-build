@@ -6,6 +6,10 @@
  * calls buildPages(). Designed to be invoked from a package.json script:
  *
  *   "build": "vite build && graspr-build-pages"
+ *
+ * The whole config object is passed through as `siteConfig`, and the
+ * `flatRoutes` / `minify` fields (if set) are forwarded as build options so the
+ * standard CLI build path honors them without a custom build script.
  */
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -25,7 +29,12 @@ async function loadSiteConfig() {
 
 async function main() {
     const siteConfig = await loadSiteConfig();
-    await buildPages({ root: process.cwd(), siteConfig });
+    await buildPages({
+        root: process.cwd(),
+        siteConfig,
+        flatRoutes: siteConfig.flatRoutes,
+        minify: siteConfig.minify,
+    });
 }
 
 main().catch((err) => {
