@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0
+
+Browser-safe module runtime.
+
+### Fixed
+
+- `@phillipsharring/graspr-build/modules` no longer pulls Node-only code into app browser bundles. `modules.mjs` previously co-located the runtime helper `initModules()` with the build-time `resolveModuleDirs()`, which does `import { existsSync } from 'node:fs'`. Any app whose browser entry imported `initModules` (e.g. to init a module like handlr-module-landing) failed its production `rollup` build with `"existsSync" is not exported by "__vite-browser-external"`. The runtime side is now free of `node:` imports, and a test guards against regressions.
+
+### Changed (breaking)
+
+- **`resolveModuleDirs()` moved** from `@phillipsharring/graspr-build/modules` to a new build-only subpath `@phillipsharring/graspr-build/module-dirs`. It touches the filesystem, so it no longer ships alongside the browser-safe runtime. It is still re-exported from the package root (`@phillipsharring/graspr-build`).
+  - **Migration:** in your build script / `vite.config.js`, change
+    `import { resolveModuleDirs } from '@phillipsharring/graspr-build/modules'`
+    to `import { resolveModuleDirs } from '@phillipsharring/graspr-build/module-dirs'`.
+  - `@phillipsharring/graspr-build/modules` still exports the browser-safe `initModules`, `configure`, and `moduleRoot` — those imports are unchanged.
+
 ## 0.4.0
 
 Dist shape options.

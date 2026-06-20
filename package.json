@@ -1,6 +1,6 @@
 {
     "name": "@phillipsharring/graspr-build",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Build mechanics for Graspr sites: HTML compiler, page baker, Vite dev plugin",
     "type": "module",
     "exports": {
@@ -8,7 +8,8 @@
         "./vite": "./src/vite-plugin.mjs",
         "./html-compiler": "./src/html-compiler.mjs",
         "./build-pages": "./src/build-pages.mjs",
-        "./modules": "./src/modules.mjs"
+        "./modules": "./src/modules.mjs",
+        "./module-dirs": "./src/module-dirs.mjs"
     },
     "bin": {
         "graspr-build-pages": "./bin/build-pages.mjs"
