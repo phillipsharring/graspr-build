@@ -1,7 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { renderPage } from './html-compiler.mjs';
-import { normalizeUrlPath, titleFromUrlPath } from './url-helpers.mjs';
+import {
+    normalizeUrlPath,
+    titleFromUrlPath,
+    routeKey,
+    resolveFlatRoutes,
+    assertNoFlatRouteConflicts,
+} from './url-helpers.mjs';
 
 async function fileExists(p) {
     try {
@@ -72,9 +78,10 @@ function toArrayOption(plural, singular, fallback) {
  *
  * @param {string[]} pagesDirs
  * @param {string} projectRoot - for relative paths in error messages
+ * @param {{keepExtension: Set<string>} | null} [flatRoutes] - when set, also enforce nested-route conflict rules so dev fails like prod
  * @returns {Promise<Map<string, string>>}
  */
-async function buildRouteIndex(pagesDirs, projectRoot) {
+async function buildRouteIndex(pagesDirs, projectRoot, flatRoutes = null) {
     /** @type {Map<string, string>} route -> filePath */
     const routes = new Map();
 
@@ -105,6 +112,19 @@ async function buildRouteIndex(pagesDirs, projectRoot) {
         }
     }
 
+    // Mirror the build-time nested-route conflict check so `vite dev` surfaces
+    // the same error as `npm run build` instead of masking it until deploy.
+    if (flatRoutes) {
+        assertNoFlatRouteConflicts(
+            [...routes].map(([route, filePath]) => ({
+                route,
+                filePath,
+                keep: flatRoutes.keepExtension.has(routeKey(route)),
+            })),
+            projectRoot
+        );
+    }
+
     return routes;
 }
 
@@ -130,10 +150,12 @@ async function buildRouteIndex(pagesDirs, projectRoot) {
  * @param {string|string[]} [opts.componentsDirs] - One or more component roots.
  * @param {string|string[]} [opts.componentsDir]  - Back-compat alias.
  * @param {string} [opts.jsSrc]                   - Path to dev JS entry. Defaults to '/app.js'.
+ * @param {boolean|{keepExtension?: string[]}} [opts.flatRoutes] - Match the build's extensionless-output mode. Falls back to `siteConfig.flatRoutes` when omitted, so setting it once in `site.config.js` covers both dev and build. Dev serving is unaffected (URLs already resolve without redirects); this only enables the nested-route conflict check so dev fails like prod. Defaults to `false`.
  */
 export function grasprBuild(opts = {}) {
     const siteConfig = opts.siteConfig || {};
     const jsSrc = opts.jsSrc || '/app.js';
+    const flatRoutes = resolveFlatRoutes(opts.flatRoutes ?? siteConfig.flatRoutes);
 
     return {
         name: 'graspr-build:dev-baked-pages',
@@ -152,7 +174,7 @@ export function grasprBuild(opts = {}) {
             let routeIndexPromise = null;
             function getRouteIndex() {
                 if (routeIndexPromise === null) {
-                    routeIndexPromise = buildRouteIndex(pagesDirs, projectRoot);
+                    routeIndexPromise = buildRouteIndex(pagesDirs, projectRoot, flatRoutes);
                 }
                 return routeIndexPromise;
             }

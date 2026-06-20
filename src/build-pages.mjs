@@ -1,7 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { renderPage } from './html-compiler.mjs';
-import { titleFromUrlPath, routeAndOutDirFromPageRel } from './url-helpers.mjs';
+import {
+    titleFromUrlPath,
+    routeAndOutDirFromPageRel,
+    routeKey,
+    resolveFlatRoutes,
+    outFileFromRoute,
+    assertNoFlatRouteConflicts,
+} from './url-helpers.mjs';
+import { createHtmlMinifier } from './minify.mjs';
 
 async function readManifest(distDir) {
     const manifestPath = path.join(distDir, '.vite', 'manifest.json');
@@ -10,6 +18,30 @@ async function readManifest(distDir) {
         return JSON.parse(json);
     } catch {
         return null;
+    }
+}
+
+/**
+ * Remove Vite's build manifest once its asset hashes have been baked into the
+ * rendered pages. It's build-internal state that has no business being deployed
+ * (a naive `aws s3 sync dist/` would otherwise ship it to a public bucket). Vite
+ * regenerates it on every build, so deleting it here loses nothing.
+ *
+ * No-ops if the manifest isn't there (e.g. `buildPages()` was called without a
+ * preceding `vite build`). The `.vite/` directory is removed too, but only when
+ * it's left empty.
+ */
+async function cleanupViteManifest(distDir) {
+    const viteDir = path.join(distDir, '.vite');
+    try {
+        await fs.unlink(path.join(viteDir, 'manifest.json'));
+    } catch {
+        return; // nothing to clean up
+    }
+    try {
+        await fs.rmdir(viteDir); // only succeeds if now empty; otherwise leave it
+    } catch {
+        // .vite/ still has other files, or is already gone — fine either way
     }
 }
 
@@ -90,18 +122,29 @@ function toArrayOption(plural, singular, fallback) {
  * @param {string} [opts.layoutsDir]                 - Layouts dir. Defaults to <root>/content/layouts. Single root by design — layouts are app-level.
  * @param {string|string[]} [opts.componentsDirs]    - One or more component dirs (later entries override earlier ones for same-name lookups).
  * @param {string|string[]} [opts.componentsDir]     - Back-compat alias for `componentsDirs`.
+ * @param {boolean|{keepExtension?: string[]}} [opts.flatRoutes] - Emit extensionless files (`dist/about`) instead of `dist/about/index.html`. `true` uses defaults (keeps `404` as `dist/404.html`); pass `{ keepExtension: [...] }` (route keys) to override. Defaults to `false` — no behavior change.
+ * @param {boolean|object} [opts.minify] - Minify each rendered page via the optional `html-minifier-terser` peer dep. `true` uses sensible defaults; pass an object to override them (merged onto the defaults). Defaults to `false`. Throws if `true` but the peer dep isn't installed.
  */
 export async function buildPages(opts = {}) {
     const root = opts.root || process.cwd();
     const distDir = opts.distDir || path.join(root, 'dist');
     const layoutsDir = opts.layoutsDir || path.join(root, 'content', 'layouts');
     const siteConfig = opts.siteConfig || {};
+    const flatRoutes = resolveFlatRoutes(opts.flatRoutes);
+
+    // Resolve the minifier up front so a missing peer dep fails before we render
+    // a single page. Returns null when minify is off.
+    const minifyHtml = await createHtmlMinifier(opts.minify);
 
     const pagesDirs = toArrayOption(opts.pagesDirs, opts.pagesDir, path.join(root, 'content', 'pages'));
     const componentsDirs = toArrayOption(opts.componentsDirs, opts.componentsDir, path.join(root, 'content', 'components'));
 
     const manifest = await readManifest(distDir);
     const { jsSrc, cssHref } = resolveAssetsFromManifest(manifest);
+
+    // The manifest's hashes are now captured in jsSrc/cssHref and about to be
+    // baked into every page — drop the build-internal file so it doesn't ship.
+    await cleanupViteManifest(distDir);
 
     // Walk every pages root, tagging each discovered file with its source root
     // so route resolution and conflict diagnostics know where it came from.
@@ -153,8 +196,22 @@ export async function buildPages(opts = {}) {
         });
     }
 
+    // Under flatRoutes, a page that flattens to an extensionless file can't share
+    // a path with a nested page that needs that path to be a directory. Surface
+    // this before writing anything so the build fails cleanly.
+    if (flatRoutes) {
+        assertNoFlatRouteConflicts(
+            pages.map((p) => ({
+                route: p.route,
+                filePath: p.pagePath,
+                keep: flatRoutes.keepExtension.has(routeKey(p.route)),
+            })),
+            root
+        );
+    }
+
     for (const p of pages) {
-        const html = await renderPage({
+        let html = await renderPage({
             layoutsDir,
             pagePath: p.pagePath,
             title: p.title,
@@ -164,12 +221,15 @@ export async function buildPages(opts = {}) {
             cssHref,
         });
 
-        await writeFile(path.join(p.outDir, 'index.html'), html);
+        if (minifyHtml) html = await minifyHtml(html);
+
+        p.outFile = outFileFromRoute(p.route, p.outDir, distDir, flatRoutes);
+        await writeFile(p.outFile, html);
     }
 
     console.log(
         'Built pages:',
-        pages.map((p) => `${p.route} -> ${path.relative(root, path.join(p.outDir, 'index.html'))}`).join(', ')
+        pages.map((p) => `${p.route} -> ${path.relative(root, p.outFile)}`).join(', ')
     );
 
     return pages;
