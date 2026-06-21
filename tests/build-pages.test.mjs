@@ -624,6 +624,51 @@ test('dev middleware does not flag conflicts when flatRoutes is off', async () =
     }
 });
 
+// Drive the dev middleware once and return the HTML written to the response.
+async function renderDevHtml({ pagesDir, layoutsDir, componentsDir, siteConfig, devCss, url }) {
+    const plugin = grasprBuild({ pagesDirs: [pagesDir], layoutsDir, componentsDir, siteConfig, devCss });
+    let middleware;
+    plugin.configureServer({
+        middlewares: { use: (fn) => { middleware = fn; } },
+        transformIndexHtml: async (_url, html) => html,
+    });
+    return await new Promise((resolve) => {
+        const res = { statusCode: 0, setHeader() {}, end(body) { resolve(body ?? ''); } };
+        middleware({ method: 'GET', url }, res, (e) => resolve(String(e)));
+    });
+}
+
+test('dev middleware emits a render-blocking stylesheet link when devCss is set', async () => {
+    const fx = await makeFixture({ 'content/pages': { 'index.html': '<h1>Home</h1>' } });
+    try {
+        const html = await renderDevHtml({
+            pagesDir: fx.pagesDirs[0],
+            layoutsDir: fx.layoutsDir,
+            componentsDir: fx.componentsDir,
+            siteConfig: { devCss: '/styles/style.css' },
+            url: '/',
+        });
+        assert.match(html, /<link rel="stylesheet" href="\/styles\/style\.css" \/>/);
+    } finally {
+        await cleanup(fx.root);
+    }
+});
+
+test('dev middleware emits no stylesheet link when devCss is unset (CSS via JS as before)', async () => {
+    const fx = await makeFixture({ 'content/pages': { 'index.html': '<h1>Home</h1>' } });
+    try {
+        const html = await renderDevHtml({
+            pagesDir: fx.pagesDirs[0],
+            layoutsDir: fx.layoutsDir,
+            componentsDir: fx.componentsDir,
+            url: '/',
+        });
+        assert.doesNotMatch(html, /rel="stylesheet"/);
+    } finally {
+        await cleanup(fx.root);
+    }
+});
+
 test('dev middleware picks up flatRoutes from siteConfig', async () => {
     const fx = await makeFixture({
         'content/pages': {

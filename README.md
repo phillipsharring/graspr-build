@@ -181,6 +181,22 @@ npm install -D html-minifier-terser
 
 Like `flatRoutes`, the `graspr-build-pages` CLI reads `minify` from `site.config.js`; you can also pass it directly to `buildPages({ ..., minify: true })` in a custom build script.
 
+## Dev stylesheet: avoiding FOUC
+
+In dev, Vite serves CSS that's `import`ed from your JS entry by injecting it via JavaScript *after* the script runs — so pages can paint unstyled for a moment (flash of unstyled content), most visible on content-heavy static sites. Production is unaffected (the hashed `<link>` from the manifest is render-blocking).
+
+To fix dev, point graspr-build at your source stylesheet so it emits a real render-blocking `<link>`:
+
+```js
+// site.config.js
+export default {
+    siteName: 'My Site',
+    devCss: '/styles/style.css', // dev-server URL of your CSS (relative to vite `root`)
+};
+```
+
+`grasprBuild({ siteConfig })` reads it (or pass `grasprBuild({ devCss: '…' })` directly). Vite still hot-reloads the linked stylesheet, so HMR is unaffected. Keep importing the CSS from your JS entry too — that's what bundles it for the production build; in dev it just loads alongside the link harmlessly. The build ignores `devCss`.
+
 ## Hosting
 
 graspr-build emits a plain `dist/` tree — host it anywhere that serves static files. Two deployment notes:

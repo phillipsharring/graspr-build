@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+Dev stylesheet link (no more FOUC).
+
+### Added
+
+- `grasprBuild({ devCss })` (also settable as `devCss` in `site.config.js`) -- dev-only URL of the source stylesheet, e.g. `/styles/style.css`. When set, dev pages render a real render-blocking `<link rel="stylesheet">` instead of relying on JS-injected CSS, eliminating the flash of unstyled content on load and navigation. Vite still hot-reloads the linked stylesheet, so HMR is unaffected. The production build ignores it (it uses the hashed CSS from the manifest). Defaults to unset — unchanged behavior.
+
 ## 0.5.0
 
 Browser-safe module runtime.
