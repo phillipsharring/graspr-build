@@ -191,9 +191,12 @@ To fix dev, point graspr-build at your source stylesheet so it emits a real rend
 // site.config.js
 export default {
     siteName: 'My Site',
-    devCss: '/styles/style.css', // dev-server URL of your CSS (relative to vite `root`)
+    // dev-server URL of your CSS (relative to vite `root`), WITH `?direct`:
+    devCss: '/styles/style.css?direct',
 };
 ```
+
+**The `?direct` query is required.** Vite serves a processed `.css` module as JavaScript (`Content-Type: text/javascript`) so it can inject + HMR it — and the browser *refuses* a `<link rel="stylesheet">` with that MIME type. Vite's `?direct` query forces it to return the compiled CSS as real `text/css`, which is what makes the link render-blocking. (If `devCss` points at a static file in `public/` or a CDN, it's already real CSS — omit `?direct`.)
 
 `grasprBuild({ siteConfig })` reads it (or pass `grasprBuild({ devCss: '…' })` directly). Vite still hot-reloads the linked stylesheet, so HMR is unaffected. Keep importing the CSS from your JS entry too — that's what bundles it for the production build; in dev it just loads alongside the link harmlessly. The build ignores `devCss`.
 

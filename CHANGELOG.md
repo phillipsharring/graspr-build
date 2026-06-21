@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+### Docs
+
+- Clarify that `devCss` must include Vite's `?direct` query (e.g. `/styles/style.css?direct`). Without it Vite serves a processed CSS module as `text/javascript`, which the browser refuses as a stylesheet — so the link silently does nothing and the FOUC remains. No code change; the plugin already passes the value through verbatim (so `public/`/CDN URLs without `?direct` keep working).
+
 ## 0.6.0
 
 Dev stylesheet link (no more FOUC).

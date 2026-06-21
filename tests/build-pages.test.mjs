@@ -645,10 +645,10 @@ test('dev middleware emits a render-blocking stylesheet link when devCss is set'
             pagesDir: fx.pagesDirs[0],
             layoutsDir: fx.layoutsDir,
             componentsDir: fx.componentsDir,
-            siteConfig: { devCss: '/styles/style.css' },
+            siteConfig: { devCss: '/styles/style.css?direct' },
             url: '/',
         });
-        assert.match(html, /<link rel="stylesheet" href="\/styles\/style\.css" \/>/);
+        assert.match(html, /<link rel="stylesheet" href="\/styles\/style\.css\?direct" \/>/);
     } finally {
         await cleanup(fx.root);
     }
